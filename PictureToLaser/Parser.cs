@@ -13,7 +13,7 @@ namespace PictureToLaser
         [Option(Required = true)]
         public string FilePath { get; set; }
 
-        [Option(Default = 100)]
+        [Option(Default = 255)]
         public int LaserMax { get; set; }
 
         [Option(Default = 0)]
@@ -115,7 +115,9 @@ namespace PictureToLaser
                 var pixelIndex = 0;
                 sb.AppendLine("G1 X0 Y" + line.MyRound() + $" F{arg.TravelRate}; Line {lineIndex}");
                 sb.AppendLine($"G1 F{arg.FeedRate}");
-                for (var pixel = 0.0; pixel < sizeX && pixelIndex < pixelsX; pixel += arg.ResX, pixelIndex++)
+                sb.AppendLine($"M117 Line {lineIndex}/{pixelsY}...");
+                var pixel = 0.0;
+                for (; pixel < sizeX && pixelIndex < pixelsX; pixel += arg.ResX, pixelIndex++)
                 {
                     sb.AppendLine("G1 X" + pixel.MyRound() + "");
 
@@ -140,11 +142,14 @@ namespace PictureToLaser
                 line += arg.ScanGap;
                 if (line > arg.SizeY || lineIndex > pixelsY)
                     break;
+                pixelIndex--;
+                pixel -= arg.ResX;
 
-                pixelIndex = pixelsX - 1;
-                sb.AppendLine($"G1 X{pixelIndex} Y" + line.MyRound() + $" F{arg.TravelRate}; Line {lineIndex}");
+                sb.AppendLine($"M117 Line {lineIndex}/{pixelsY}...");
+
+                sb.AppendLine($"G1 Y" + line.MyRound() + $" F{arg.TravelRate}; Line {lineIndex}");
                 sb.AppendLine($"G1 F{arg.FeedRate}");
-                for (var pixel = sizeX; pixel > 0 && pixelIndex > 0; pixel -= arg.ResX, pixelIndex--)
+                for (; pixel > 0 && pixelIndex > 0; pixel -= arg.ResX, pixelIndex--)
                 {
                     sb.AppendLine("G1 X" + pixel.MyRound() + "");
 
