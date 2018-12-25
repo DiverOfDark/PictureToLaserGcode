@@ -168,8 +168,6 @@ namespace PictureToLaser
             Move lastX = null;
             Move lastY = null;
 
-            bool anyRemoved = false;
-            
             while (source.Count > 0)
             {
                 var current = source.Dequeue();
@@ -181,7 +179,7 @@ namespace PictureToLaser
                     {
                         target.Remove(lastX);
                     }
-                        
+
                     if (move.NewY.HasValue && !move.NewX.HasValue && !move.Rate.HasValue &&
                         move.NewY.Value.MyRound() == lastY?.NewY?.MyRound())
                     {
@@ -211,26 +209,5 @@ namespace PictureToLaser
             target.ForEach(result.Enqueue);
             return result;
         }
-
-        private static bool OnTheSameLine(Move move1, Move move2, Move move3)
-        {
-            if (move1.NewX != null && move1.NewY == null && move1.Rate == null &&
-                move2.NewX != null && move2.NewY == null && move2.Rate == null &&
-                move3.NewX != null && move3.NewY == null && move3.Rate == null)
-            {
-                return move1.NewX < move2.NewX && move2.NewX < move3.NewX ||
-                       move1.NewX > move2.NewX && move2.NewX > move3.NewX;
-            }
-
-            
-            if (move1.NewY != null && move1.NewX == null && move1.Rate == null &&
-                move2.NewY != null && move2.NewX == null && move2.Rate == null &&
-                move3.NewY != null && move3.NewX == null && move3.Rate == null)
-            {
-                return move1.NewY < move2.NewY && move2.NewY < move3.NewY ||
-                       move1.NewY > move2.NewY && move2.NewY > move3.NewY;
-            }
-
-            return false;
-        }}
+    }
 }

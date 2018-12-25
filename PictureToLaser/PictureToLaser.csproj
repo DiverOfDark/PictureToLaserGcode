@@ -72,12 +72,18 @@
     <Compile Include="Commands\MillimeterUnitsCommand.cs" />
     <Compile Include="Commands\Move.cs" />
     <Compile Include="Commands\Pause.cs" />
+    <Compile Include="Commands\SetFanPower.cs" />
     <Compile Include="Commands\SetLaserPower.cs" />
     <Compile Include="Commands\Status.cs" />
     <Compile Include="Commands\TurnLaserOff.cs" />
     <Compile Include="Commands\TurnLaserOn.cs" />
     <Compile Include="Extensions.cs" />
+    <Compile Include="GCodeConverter.cs" />
     <Compile Include="ImageHelper.cs" />
+    <Compile Include="ImageToGcode.cs" />
+    <Compile Include="MovementDetails.cs" />
+    <Compile Include="NcToGcode.cs" />
+    <Compile Include="Options.cs" />
     <Compile Include="Parser.cs" />
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>

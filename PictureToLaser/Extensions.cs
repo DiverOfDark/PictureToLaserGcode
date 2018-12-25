@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 
 namespace PictureToLaser
@@ -10,6 +11,14 @@ namespace PictureToLaser
         public static string MyRound(this double d) => Math.Round(d, 4).ToString(CultureInfo.InvariantCulture);
         public static string MyInt(this double d) => Math.Round(d, 0).ToString(CultureInfo.InvariantCulture);
 
+        public static void Requeue<T>(this Queue<T> source, Queue<T> target)
+        {
+            while (source.Count > 0)
+            {
+                target.Enqueue(source.Dequeue());
+            }
+        }
+        
         public static double Map(double value, double fromLow, double fromHigh, double toLow, double toHigh)
         {
             var fromRange = fromHigh - fromLow;
