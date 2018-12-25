@@ -65,6 +65,19 @@
     <Reference Include="PresentationFramework" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Commands\AbstractCommand.cs" />
+    <Compile Include="Commands\BedLevelingCommand.cs" />
+    <Compile Include="Commands\Comment.cs" />
+    <Compile Include="Commands\DisableLaserPower.cs" />
+    <Compile Include="Commands\MillimeterUnitsCommand.cs" />
+    <Compile Include="Commands\Move.cs" />
+    <Compile Include="Commands\Pause.cs" />
+    <Compile Include="Commands\SetLaserPower.cs" />
+    <Compile Include="Commands\Status.cs" />
+    <Compile Include="Commands\TurnLaserOff.cs" />
+    <Compile Include="Commands\TurnLaserOn.cs" />
+    <Compile Include="Extensions.cs" />
+    <Compile Include="ImageHelper.cs" />
     <Compile Include="Parser.cs" />
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
@@ -79,6 +92,7 @@
       <DependentUpon>Settings.settings</DependentUpon>
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
     </Compile>
+    <Compile Include="QueueOptimizer.cs" />
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>

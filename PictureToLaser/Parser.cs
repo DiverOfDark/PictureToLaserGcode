@@ -3,7 +3,10 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text;
+using System.Windows.Controls;
+using System.Windows.Media.Animation;
 using CommandLine;
 
 namespace PictureToLaser
@@ -19,17 +22,15 @@ namespace PictureToLaser
         [Option(Default = 0)]
         public int LaserMin { get; set; }
 
-        [Option(Default = 1000)]
-        public int FeedRate { get; set; }
-        [Option(Default = 3000)]
+        [Option(Default = 2000)]
         public int TravelRate { get; set; }
 
-        [Option(Default = 40)]
+        [Option(Default = 50.0)]
         public double SizeY { get; set; }
 
-        [Option(Default = 0.15)]
+        [Option(Default = 0.10)]
         public double ScanGap { get; set; }
-        [Option(Default = 0.1)]
+        [Option(Default = 0.10)]
         public double ResX { get; set; }
     }
 
@@ -39,22 +40,8 @@ namespace PictureToLaser
         {
             if (args.Length == 0)
             {
-                var filePath = @"z:\photo.jpg";
-
-                if (!File.Exists(filePath))
-                {
-                    var b = new Bitmap(255, 10);
-                    var g = Graphics.FromImage(b);
-
-                    for (int i = 0; i < 255; i++)
-                    {
-                        g.FillRectangle(new SolidBrush(Color.FromArgb(i, i, i)), new Rectangle(i, 0, 2, 50));
-                    }
-
-                    g.Flush();
-                    b.Save(filePath);
-                }
-
+                var filePath = @"f:\laserable\octocat.png";
+                ImageHelper.CreateSampleImageIfNotExists(filePath);
                 args = new[] { "--filepath", filePath };
             }
             CommandLine.Parser.Default.ParseArguments<Options>(args).MapResult(Parsed, Errors);
@@ -75,126 +62,113 @@ namespace PictureToLaser
             int pixelsX, pixelsY;
             double sizeX;
             float[,] arr;
-            {
-                using (var img = Bitmap.FromFile(arg.FilePath))
-                {
-                    sizeX = arg.SizeY * img.Width /
-                                img.Height; //SET A HEIGHT AND CALC WIDTH (this should be customizable)
-                    pixelsX = (int)(sizeX / arg.ResX);
-                    pixelsY = (int)(arg.SizeY / arg.ScanGap);
-                    arr = new float[pixelsX, pixelsY];
-                    using (var newImg = new Bitmap(img, pixelsX, pixelsY))
-                    {
-                        for (int i = 0; i < pixelsX; i++)
-                            for (int j = 0; j < pixelsY; j++)
-                                arr[i, j] = newImg.GetPixel(i, j).GetBrightness();
-                    }
-                }
-            }
+            ImageHelper.GetPixelsForEngraving(arg.FilePath, arg.SizeY, arg.ResX, arg.ScanGap, out pixelsX, out pixelsY, out sizeX, out arr);
+            
+            Console.WriteLine("Downscaled.");
 
-            var sb = new StringBuilder();
-
+            var widthCm = sizeX * arg.ResX;
+            var heightCm = arg.SizeY * arg.ScanGap;
+            
             var laserMin = arg.LaserMin;
             var laserMax = arg.LaserMax;
 
-            sb.AppendLine($";Size in pixels X={pixelsX}, Y={pixelsY}");
-            sb.AppendLine($";Size in cm X={sizeX * arg.ResX}, Y={arg.SizeY * arg.ScanGap}");
-            var cmdRate = (int)(arg.FeedRate / arg.ResX * 2 / 60);
-            sb.AppendLine($";Speed is {arg.FeedRate} mm/min, {arg.ResX} mm/pix => {cmdRate} lines/sec");
-            sb.AppendLine($";Power is {laserMin} to {laserMax} (" + laserMin / 255.0 * 100 + "%-" +
-                          laserMax / 255.0 * 100 + "%)");
+            var cmdRate = (int)(arg.TravelRate / arg.ResX * 2 / 60);
 
-            sb.AppendLine("G21");
-            sb.AppendLine("M5; Turn laser off");
-            sb.AppendLine($"G1 F{arg.FeedRate}");
+            var commands = new Queue<AbstractCommand>();
+            commands.Enqueue(new Comment($"Size in pixels X={pixelsX}, Y={pixelsY}"));            
+            commands.Enqueue(new Comment($"Size in cm X={widthCm}, Y={heightCm}"));
+            
+            commands.Enqueue(
+                new Comment($"Speed is {arg.TravelRate} mm/min, {arg.ResX} mm/pix => {cmdRate} lines/sec"));
 
-            var lineIndex = 0;
-            sb.AppendLine($"G0 X0 Y0 F{arg.TravelRate}");
-            for (var line = 0.0; line < arg.SizeY && lineIndex < pixelsY; line += arg.ScanGap)
+            var totalTime = new TimeSpan(0, 0, (int) (100 * widthCm * arg.SizeY / arg.TravelRate * 60));
+            
+            commands.Enqueue(new Comment($"Estimated engraving time: {totalTime}"));
+            
+            commands.Enqueue(new Comment($"Power is {laserMin} to {laserMax} (" + laserMin / 255.0 * 100 + "%-" +
+                                         laserMax / 255.0 * 100 + "%)"));
+
+            Console.WriteLine(String.Join("\n", commands));
+            
+            if (widthCm > 22 || heightCm > 22)
             {
-                var pixelIndex = 0;
-                sb.AppendLine("G1 X0 Y" + line.MyRound() + $" F{arg.TravelRate}; Line {lineIndex}");
-                sb.AppendLine($"G1 F{arg.FeedRate}");
-                sb.AppendLine($"M117 Line {lineIndex}/{pixelsY}...");
-                var pixel = 0.0;
-                for (; pixel < sizeX && pixelIndex < pixelsX; pixel += arg.ResX, pixelIndex++)
-                {
-                    sb.AppendLine("G1 X" + pixel.MyRound() + "");
-
-                    var value = arr[pixelIndex, lineIndex];
-                    var lvalue = Map(value, 1, 0, laserMin, laserMax).MyRound();
-                    sb.AppendLine($"M3 S{lvalue}");
-
-                    while (pixelIndex + 1 < pixelsX)
-                    {
-                        var nextValue = arr[pixelIndex + 1, lineIndex];
-                        var lnextValue = Map(nextValue, 1, 0, laserMin, laserMax).MyRound();
-                        if (lnextValue != lvalue)
-                            break;
-
-                        pixel += arg.ResX;
-                        pixelIndex++;
-                    }
-                }
-
-                sb.AppendLine("M5;");
-                lineIndex++;
-                line += arg.ScanGap;
-                if (line > arg.SizeY || lineIndex > pixelsY)
-                    break;
-                pixelIndex--;
-                pixel -= arg.ResX;
-
-                sb.AppendLine($"M117 Line {lineIndex}/{pixelsY}...");
-
-                sb.AppendLine($"G1 Y" + line.MyRound() + $" F{arg.TravelRate}; Line {lineIndex}");
-                sb.AppendLine($"G1 F{arg.FeedRate}");
-                for (; pixel > 0 && pixelIndex > 0; pixel -= arg.ResX, pixelIndex--)
-                {
-                    sb.AppendLine("G1 X" + pixel.MyRound() + "");
-
-                    var value = arr[pixelIndex, lineIndex];
-                    var lvalue = Map(value, 1, 0, laserMin, laserMax).MyRound();
-                    sb.AppendLine($"M3 S{lvalue}");
-
-                    while (pixelIndex - 1 > 0)
-                    {
-                        var nextValue = arr[pixelIndex - 1, lineIndex];
-                        var lnextValue = Map(nextValue, 1, 0, laserMin, laserMax).MyRound();
-                        if (lnextValue != lvalue)
-                            break;
-
-                        pixel -= arg.ResX;
-                        pixelIndex--;
-                    }
-                }
-
-
-                sb.AppendLine("M5;");
-                lineIndex++;
+                Console.Error.WriteLine($"Sizes are out of possible: {widthCm} / {heightCm}");
+                return 1;
             }
 
-            sb.AppendLine($"M5 ;Turn laser off");
-            sb.AppendLine($"G0 X0 Y0 F{arg.TravelRate} ;Go home");
+            commands.Enqueue(new MillimeterUnitsCommand());
+            
+            commands.Enqueue(new BedLevelingCommand(false));
+            commands.Enqueue(new SetLaserPower(0) {Comment = "Turn laser pwm off"});
+            commands.Enqueue(new TurnLaserOn());
 
-            File.WriteAllText(Path.ChangeExtension(arg.FilePath, "gcode"), sb.ToString());
+            var lineIndex = 0;
+            commands.Enqueue(new Move {NewX = 0, NewY = 0, Rate = arg.TravelRate});
+            
+            // Draw rect around area;
+            commands.Enqueue(new SetLaserPower(1));
+            commands.Enqueue(new Move {NewX = sizeX});
+            commands.Enqueue(new Move{NewY = arg.SizeY});
+            commands.Enqueue(new Move{NewX = 0});
+            commands.Enqueue(new Move{NewY = 0});
+
+            commands.Enqueue(new Pause());
+
+            commands.Enqueue(new SetLaserPower(0));
+            for (var line = 0.0; line < arg.SizeY && lineIndex < pixelsY; line += arg.ScanGap)
+            {
+                commands.Enqueue(new Move {NewY = line, Comment = $"Line {lineIndex}"});
+                commands.Enqueue(new Status($"Line {lineIndex}/{pixelsY}..."));
+
+                var minX = 0;
+                var maxX = pixelsX;
+                Extensions.AdjustMinMaxPixels(arg, arr, lineIndex, ref minX, ref maxX);
+                
+                for (var pixelIndex = minX; pixelIndex < maxX; pixelIndex++)
+                {
+                    commands.Enqueue(new Move {NewX = arg.ResX * pixelIndex});
+                    var lvalue = Extensions.Map(arr[pixelIndex, lineIndex], 1, 0, laserMin, laserMax);
+                    commands.Enqueue(new SetLaserPower(lvalue));
+                }
+
+                commands.Enqueue(new SetLaserPower(0));
+                lineIndex++;
+                line += arg.ScanGap;
+                if (line >= arg.SizeY || lineIndex >= pixelsY)
+                    break;
+
+                minX = 0;
+                maxX = pixelsX;
+                Extensions.AdjustMinMaxPixels(arg, arr, lineIndex, ref minX, ref maxX);
+                
+                commands.Enqueue(new Status($"Line {lineIndex}/{pixelsY}..."));
+
+                commands.Enqueue(new Move {NewY = line});
+                for (var pixelIndex = maxX - 1; pixelIndex > minX; pixelIndex--)
+                {
+                    commands.Enqueue(new Move {NewX = arg.ResX * pixelIndex});
+                    var lvalue = Extensions.Map(arr[pixelIndex, lineIndex], 1, 0, laserMin, laserMax);
+                    commands.Enqueue(new SetLaserPower(lvalue));
+                }
+
+                commands.Enqueue(new SetLaserPower(0));
+                lineIndex++;
+            }
+            
+            commands.Enqueue(new DisableLaserPower());
+            commands.Enqueue(new BedLevelingCommand(true));
+            commands.Enqueue(new TurnLaserOff {Comment = "Turn laser power off"});
+            commands.Enqueue(new Move {NewX = 0, NewY = 0, Rate = arg.TravelRate, Comment = "Go home"});
+
+            commands = QueueOptimizer.Optimize(commands);
+            
+            var contents = string.Join("\n", commands.Select(s => s.ToString()));
+            File.WriteAllText(Path.ChangeExtension(arg.FilePath, "gcode"), contents);
+            Console.WriteLine("Saved G-Code.");
             return null;
         }
 
-        static string MyRound(this double d) => Math.Round(d, 4).ToString(CultureInfo.InvariantCulture);
 
-        static double Map(double value, double fromLow, double fromHigh, double toLow, double toHigh)
-        {
-            var fromRange = fromHigh - fromLow;
-            var toRange = toHigh - toLow;
-            var scaleFactor = toRange / fromRange;
-
-            // Re-zero the value within the from range
-            var tmpValue = value - fromLow;
-            // Rescale the value to the to range
-            tmpValue *= scaleFactor;
-            // Re-zero back to the to range
-            return tmpValue + toLow;
-        }
+        
     }
 }
