@@ -56,28 +56,23 @@ namespace PictureToLaser
                         commands.Add(lastCommand = new Move { ArcCounterClockwise = true});
                         continue;
                     case "M3":
-                        commands.Add(lastCommand = new SetLaserPower(lastPower ?? -1));
+                        // commands.Add(lastCommand = new SetLaserPower(lastPower ?? -1));
                         continue;
                     case "M5":
-                        commands.Add(lastCommand = new SetLaserPower(0));
+                        // commands.Add(lastCommand = new SetLaserPower(0));
                         continue;
                     default:
                         var value = double.Parse(line.Substring(1), new NumberFormatInfo(){NumberDecimalSeparator = "."});
                         if (line.StartsWith("S"))
                         {
                             lastPower = value;
-                            if (lastCommand is SetLaserPower power && power.Power == -1)
+                            if (lastCommand is Move move)
                             {
-                                power.Power = value;
-                            }
-                            else if (lastCommand is Move move)
-                            {
-                                var newCommand = new SetLaserPower(value);
-                                commands.Insert(commands.IndexOf(lastCommand), newCommand);
+                                move.Power = lastPower;
                             }
                             else
                             {
-                                commands.Add(lastCommand = new SetLaserPower(value));
+                                throw new NotSupportedException();
                             }
                         }
                         else if (line.StartsWith("I"))

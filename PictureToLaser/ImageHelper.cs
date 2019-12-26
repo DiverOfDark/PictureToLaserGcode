@@ -7,7 +7,7 @@ namespace PictureToLaser
     {
         public static void CreateSampleImageIfNotExists(string filePath)
         {
-            if (!File.Exists(filePath))
+            if (!File.Exists(filePath) && !Directory.Exists(filePath))
             {
                 var b = new Bitmap(255, 10);
                 var g = Graphics.FromImage(b);

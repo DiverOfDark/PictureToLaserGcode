@@ -11,7 +11,6 @@ namespace PictureToLaser
             while (lengthChanged)
             {
                 var oldLength = commands.Count;
-                commands = OptimizeQueueLaserPower(commands);
                 commands = OptimizeQueueLineMoves(commands);
                 commands = OptimizeQueueMoves(commands);
                 commands = OptimizeQueueStatuses(commands);
@@ -20,42 +19,6 @@ namespace PictureToLaser
             }
 
             return commands;
-        }
-
-        private static Queue<AbstractCommand> OptimizeQueueLaserPower(Queue<AbstractCommand> source)
-        {
-            var target = new Queue<AbstractCommand>();
-
-            string lastPower = null;
-
-            while (source.Count > 0)
-            {
-                var current = source.Dequeue();
-
-                switch (current)
-                {
-                    case SetLaserPower power:
-                    {
-                        var newPower = power.Power;
-                        if (newPower.MyInt() == lastPower)
-                        {
-                            continue;
-                        }
-
-                        lastPower = newPower.MyInt();
-                        break;
-                    }
-                    case DisableLaserPower _:
-                    case TurnLaserOn _:
-                    case TurnLaserOff _:
-                        lastPower = null;
-                        break;
-                }
-
-                target.Enqueue(current);
-            }
-
-            return target;
         }
 
         private static Queue<AbstractCommand> OptimizeQueueLineMoves(Queue<AbstractCommand> source)

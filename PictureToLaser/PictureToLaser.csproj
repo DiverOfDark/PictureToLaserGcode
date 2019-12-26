@@ -72,8 +72,6 @@
     <Compile Include="Commands\MillimeterUnitsCommand.cs" />
     <Compile Include="Commands\Move.cs" />
     <Compile Include="Commands\Pause.cs" />
-    <Compile Include="Commands\SetFanPower.cs" />
-    <Compile Include="Commands\SetLaserPower.cs" />
     <Compile Include="Commands\Status.cs" />
     <Compile Include="Commands\TurnLaserOff.cs" />
     <Compile Include="Commands\TurnLaserOn.cs" />

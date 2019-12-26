@@ -38,25 +38,30 @@ namespace PictureToLaser
 
             commands.Enqueue(new MillimeterUnitsCommand());
             
-            commands.Enqueue(new BedLevelingCommand(false));
+            // commands.Enqueue(new BedLevelingCommand(false));
 
-            commands.Enqueue(new Move {NewX = details.MinX, NewY = details.MinY, Rate = _arg.TravelRate});
+            commands.Enqueue(new Move {NewX = details.MinX, NewY = details.MinY });
+            commands.Enqueue(new Move {NewX = details.MinX, NewY = details.MinY, Linear = true});
 
-            commands.Enqueue(new SetLaserPower(0) {Comment = "Turn laser pwm off"});
-            commands.Enqueue(new TurnLaserOn());
+            commands.Enqueue(new Move {Rate = _arg.TravelRate});
+            commands.Enqueue(new Move {Rate = _arg.TravelRate, Linear = true});
 
-            commands.Enqueue(new SetFanPower(255));
+            // commands.Enqueue(new SetLaserPower(0) {Comment = "Turn laser pwm off"});
+            //commands.Enqueue(new TurnLaserOn());
+
+            // commands.Enqueue(new SetFanPower(255));
             
             // Draw rect around area;
-            commands.Enqueue(new SetLaserPower(1));
+            // commands.Enqueue(new SetLaserPower(1));
+            commands.Enqueue(new Move {NewX = details.MinX, NewY = details.MinY});
             commands.Enqueue(new Move {NewX = details.MaxX});
             commands.Enqueue(new Move {NewY = details.MaxY});
             commands.Enqueue(new Move {NewX = details.MinX});
             commands.Enqueue(new Move {NewY = details.MinY});
 
-            commands.Enqueue(new Pause());
+            // commands.Enqueue(new Pause());
 
-            commands.Enqueue(new SetLaserPower(0));
+            // commands.Enqueue(new SetLaserPower(0));
 
             return commands;
         }
@@ -67,10 +72,8 @@ namespace PictureToLaser
             commands.Enqueue(new DisableLaserPower());
             commands.Enqueue(new TurnLaserOff {Comment = "Turn laser power off"});
 
-            commands.Enqueue(new SetFanPower(0));
-
-            commands.Enqueue(new BedLevelingCommand(true));
-            commands.Enqueue(new Move {NewX = 0, NewY = 0, Rate = _arg.TravelRate, Comment = "Go home"});
+            // commands.Enqueue(new BedLevelingCommand(true));
+            commands.Enqueue(new Move {NewX = 0, NewY = 0, Comment = "Go home"});
 
             return commands;
         }
@@ -100,16 +103,17 @@ namespace PictureToLaser
                     {
                         result.TravelDistance += Math.Abs(move.NewY.Value - currentY);
                         currentY = move.NewY.Value;
-                        
+
                         result.MinY = Math.Min(result.MinY, move.NewY.Value);
                         result.MaxY = Math.Max(result.MaxY, move.NewY.Value);
                     }
-                }
 
-                if (item is SetLaserPower power)
-                {
-                    result.LaserMin = (int) Math.Min(power.Power, result.LaserMin);
-                    result.LaserMax = (int) Math.Max(power.Power, result.LaserMax);
+                    if (move.Power.HasValue)
+                    {
+                        var power = move.Power.Value;
+                        result.LaserMin = (int) Math.Min(power, result.LaserMin);
+                        result.LaserMax = (int) Math.Max(power, result.LaserMax);
+                    }
                 }
             }
 

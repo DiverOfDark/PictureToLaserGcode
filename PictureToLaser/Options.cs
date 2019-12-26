@@ -7,16 +7,16 @@ namespace PictureToLaser
         [Option(Required = true)]
         public string FilePath { get; set; }
 
-        [Option(Default = 255)]
+        [Option(Default = 100)]
         public int LaserMax { get; set; }
 
         [Option(Default = 0)]
         public int LaserMin { get; set; }
 
-        [Option(Default = 2000)]
+        [Option(Default = 800)]
         public int TravelRate { get; set; }
 
-        [Option(Default = 50.0)]
+        [Option(Default = 140.0)]
         public double SizeY { get; set; }
 
         [Option(Default = 0.15)]

@@ -69,12 +69,9 @@ namespace PictureToLaser
                     even ? pixelIndex < maxX : pixelIndex > minX;
                     pixelIndex += even ? 1 : -1)
                 {
-                    commands.Enqueue(new Move {NewX = arg.ResX * pixelIndex});
                     var lvalue = Extensions.Map(arr[pixelIndex, lineIndex], 1, 0, laserMin, laserMax);
-                    commands.Enqueue(new SetLaserPower(lvalue));
+                    commands.Enqueue(new Move {NewX = arg.ResX * pixelIndex, Power = lvalue});
                 }
-
-                commands.Enqueue(new SetLaserPower(0));
             }
 
             return commands;

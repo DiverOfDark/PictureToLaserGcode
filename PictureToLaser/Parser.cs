@@ -15,9 +15,22 @@ namespace PictureToLaser
     {
         static void Main(string[] args)
         {
+            var width = 55;
+
+            
+            File.Delete(@"C:\Work\Repository\RRFC\gcodes\test.gcode");
+            for (int i = 1000; i >= 200; i -= 20)
+            {
+                File.AppendAllText(@"C:\Work\Repository\RRFC\gcodes\test.gcode", $@"G1 X{width} S255 F{i}
+G1 Y{width} S255 F{i}
+G1 X0 S255 F{i}
+G1 Y0 S255 F{i}
+");
+            }
+
             if (args.Length == 0)
             {
-                var filePath = @"f:\laserable\cala.nc";
+                var filePath = @"C:\Work\Repository\RRFC\gcodes";
                 ImageHelper.CreateSampleImageIfNotExists(filePath);
                 args = new[] { "--filepath", filePath };
             }
@@ -40,6 +53,26 @@ namespace PictureToLaser
             object exitCode = 0;
 
             Queue<AbstractCommand> result = null;
+
+            if (Directory.Exists(arg.FilePath))
+            {
+                var entries = Directory.GetFiles(arg.FilePath, "*.nc");
+                foreach (var v in entries)
+                {
+                    Parsed(new Options
+                    {
+                        FilePath = v,
+                        LaserMax = arg.LaserMax,
+                        LaserMin = arg.LaserMin,
+                        TravelRate = arg.TravelRate,
+                        ResX = arg.ResX,
+                        ScanGap = arg.ScanGap,
+                        SizeY = arg.SizeY
+                    });
+                    File.Delete(v);
+                }
+                return 0;
+            }
             
             switch (Path.GetExtension(arg.FilePath))
             {   
@@ -59,7 +92,7 @@ namespace PictureToLaser
 
             if (result != null)
             {
-                result = QueueOptimizer.Optimize(result);
+                // result = QueueOptimizer.Optimize(result);
 
                 var sb = new StringBuilder();
                 while (result.Count > 0)

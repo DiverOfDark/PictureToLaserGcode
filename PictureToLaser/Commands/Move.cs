@@ -9,6 +9,8 @@ namespace PictureToLaser
         public double? NewI { get; set; }
         public double? NewJ { get; set; }
         
+        public double? Power { get; set; }
+        
         public bool ArcClockwise { get; set; } // G2
         public bool ArcCounterClockwise { get; set; } //G3
         public bool Linear { get; set; }
@@ -43,6 +45,11 @@ namespace PictureToLaser
             if (Rate.HasValue)
             {
                 res += " F" + Rate.Value;
+            }
+
+            if (Power.HasValue)
+            {
+                res += " S" + Power.Value.MyRound();
             }
 
             res += base.ToString();
